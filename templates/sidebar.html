@@ -1,0 +1,28 @@
+<div class="sidebar">
+  <div class="container sidebar-sticky">
+    <div class="sidebar-about">
+      <h1>
+        <a href="/">
+          MonadCat
+        </a>
+      </h1>
+      <p class="lead">Words about Haskell, Maths, JS and life</p>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="sidebar-nav-item $if(isRoot)$ active $endif$" href="/">Home</a>
+      <a class="sidebar-nav-item $if(isPosts)$ active $endif$" href='/pages/posts.html'>Posts</a>
+      <div class='vertical-spacer'></div>
+
+      <a class='sidebar-nav-item' href='https://twitter.com/monad_cat' target='_blank'>Twitter</a>
+      <a class='sidebar-nav-item' href='https://github.com/mkawalec' taget='_blank'>Github</a>
+      <a class='sidebar-nav-item' href='mailto:michal@monad.cat' target='_blank'>Email</a>
+      <a class='sidebar-nav-item' href='https://keybase.io/monad_cat' target='_blank'>Keybase</a>
+    </nav>
+
+    <p>$currentYear$. Made with help from
+      <a href='https://jaspervdj.be/hakyll'>Hakyll</a> and
+      <a href='https://github.com/poole/hyde'>Hyde</a>.
+    </p>
+  </div>
+</div>
