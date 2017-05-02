@@ -143,9 +143,37 @@ same tree? We just need a simple new algebra:
     cata getValue fixedExpr => 8
 
 Which is true given the way we've bundled expressions together in the
-above tree.
+above tree.  
 
-- anamorphisms
+## Anamorphism
+
+We can abstract away folds, can we unfold from a single value using a
+similar scheme? Sure we can. For that we need an oposite of algebra, a
+coalgebra
+
+    type Coalgebra f a = a -> f a
+
+    unwrap :: Coalgebra ExprF Int
+    unwrap i
+      | i < 4     = Add (i + 1) (i + 2)
+      | otherwise = Const i
+
+Anamorphism is a kind of opposite of a catamorphism, so let's see what
+we get if we just flip functions around in the catamorphism. We have to
+remember to wrap where cata unwraps:
+
+    ana f = Fix . fmap (ana f) . f
+    
+    ana unwrap 1 => No instance for (Show (Fix ExprF)) arising from a use of ‘print’
+
+Oh, there's no way of printing `Fix`, which may be infinite. But we know
+how to print it, just use our catamorphism:
+
+    cata printAlg $ ana unwrap 1 => "(((4 + 5) + 4) + (4 + 5))"
+
+Nice
+
+
 - paramorphisms
 - using recursion schemes in Haskell with the recursion-schemes library
 - similarity to the Free Monad
