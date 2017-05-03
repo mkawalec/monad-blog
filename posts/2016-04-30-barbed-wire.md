@@ -20,9 +20,9 @@ The plan for writing:
 
 We usually write recursive data types like 
   
-  data Expr = Const Int
-            | Add Expr Expr
-            | Mul Expr Expr
+    data Expr = Const Int
+              | Add Expr Expr
+              | Mul Expr Expr
 
 It's perfectly valid to write a syntax tree this way, but writing a
 function that operates on the whole tree is pretty tedious
@@ -173,7 +173,53 @@ how to print it, just use our catamorphism:
 
 Nice
 
+## Paramorphisms
 
-- paramorphisms
+Notice that neither of these functions has access to the original
+structure. Stages higher up in a catamorphism (fold) only see the
+pretty-printed versions of elements down the tree, if we're creating a
+string-based representation. In many real-world tasks this is not enough
+and we need access to the original values along with their output
+representations. It would be a bit silly to parse output strings when
+folding.
+
+Algebras that carry that information are called R-Algebras
+
+    type RAlgebra f a = f (Fix f, a) -> a
+
+A recursion scheme accepting this type is called a paramorphism
+
+    para :: (Functor f) => RAlgebra f a -> Fix f -> a
+    para rAlg = rAlg . fmap fanout . outF
+      where fanout :: Fix f -> (Fix f, a)
+            fanout t = (t, para rAlg a)
+
+Notice how types perfectly match up, so much so that we can almost write
+these schemes by intuition.
+
+A cool example of a paramorphism would be to sum the additions together,
+if it turns we want to shorten the output for some important reason
+
+concatSums :: RAlgebra ExprF String
+concatSums (Const i) = show i
+concatSums (Add (aExpr, _) (bExpr, _)) = show $ cata getVal aExpr + cata getValue bExpr
+concatSums (Mul (_, a) (_, b)) = a ++ " * " ++ b
+
+Here we've used both catamorphism for wrapping up the sums and
+paramorphism for neatly doing everything in one step. 
+
+Notice how `Const i` behaves differently then `Add` and `Mul`. That is
+obvious from the definition of `fmap` above. `fmap something (Const i)`
+equals `Const i` from definition, so it allows us to populate leaves in
+the tree and have a neat starting point for providing two arugments to
+`Add` and `Mul`
+
+Coolness.
+
+TODO: An example here. Reword the above with more context
+
+## Recursion schemes library
+
+
+
 - using recursion schemes in Haskell with the recursion-schemes library
-- similarity to the Free Monad
