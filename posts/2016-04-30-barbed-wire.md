@@ -1,22 +1,21 @@
 ---
-title: Programming with bananas and barbed wire
+title: Programming with bananas and barbed wire. Part 1
 author: Michał Kawalec
 ---
 
-The idea for recursion schemes is pretty simple. We abstract over the
-common parts of recursion and only specify what we do to each element.
-Let's start with a simple example that uses the recursion-schemes
-Haskell library.
 
-How can we 
+This post is the first in a two-part series on recursion schemes. Here I
+want to build intuiton and understanding of what recursion schemes are
+and how to write them yourself. In the second part we'll explore Ed
+Kmett's
+[recursion-schemes](https://hackage.haskell.org/package/recursion-schemes-5.0.1/docs/Data-Functor-Foldable.html)
+library to show you how to use recursion schemes in real-life Haskell
+code. Examples in the following text are intentionally kept as simple as
+possible to aid in understanding of underlying ideas more than the
+examples themselves. Let's jump right in.
 
-The plan for writing:
-- what are recursion schemes
-- what is an algebra?
 
-
-- fixpoints of functors
-
+### Expressing recursion
 
 We usually write recursive data types like 
   
@@ -24,92 +23,114 @@ We usually write recursive data types like
               | Add Expr Expr
               | Mul Expr Expr
 
-It's perfectly valid to write a syntax tree this way, but writing a
-function that operates on the whole tree is pretty tedious
+It's a common way of writing a syntax tree, but it's not without
+downsides. Consider the following function that pretty-prints a tree
+made from this datatype.
 
     print :: Expr -> String
     print (Const i) = show i
     print (Add a b) = print a ++ " + " ++ print b
     print (Mul a b) = print a ++ " * " ++ print b
 
-This works but keeps the `print` function intimately bound to the
-data type with it's metastructure being replicated through the
-explicit application of recursion.
+This is the usual way of defining recursion we're used to everywhere, we
+define it explicitly. It may not be optimal from the perspective of code
+readability with more complex recursion. There is also a possible
+performance penalty as GHC is way better in optimizing non-recursive
+then recursive code.
 
 
-Let's consider the following data type instead.
+Can we do better? Possibly. Consider the following data type where
+we're using a type parameter for encoding recursion.
 
     data ExprF a = Const Int
                  | Add a a
                  | Mul a a
                  deriving (Show, Eq)
 
-Then we can plug it into the fixpoint and it will terminate any time
-there is a `Const` constructor! Is this a functor though? Let's
-implement `fmap` and see.
+The idea here is that we will use something called a 'fix point' of a
+functor to encode recursive behavior inside `a` somehow. Before we get
+to that, let's prove our type is indeed a functor. To do that we have to
+implement `fmap` that abides by the functor laws. I propose the
+following fmap
 
     fmap f (Const i) = Const i
     fmap f (Add a a) = Add (f a) (f a)
     fmap f (Mul a a) = Mul (f a) (f a)
 
-And the functor laws are
+So by applying `f` with `fmap` we unpack a level out of a functor, apart
+from the `Const` case where we return the thing itself. The reason for
+passing `i` through is that `fmap` has type `a -> b`, but the type of
+`i` is always `Int`, so we can't match the types in general.
+
+Our good old functor laws are
 
     fmap id == id
     fmap (f . g) == fmap f . fmap g
 
-The first is trivially fulfilled, the second for the case of `Add`
-looks like
+To check that the first law is fulfilled, insert `id` for the function
+`f` and the proof will flow from definition above. The second case for
+`Add` will look as follows. It's the same for `Mul` since they have the
+same structure.
 
-    Add (f . g $ a) (f . g $ a) = fmap f (Add (g a) (g a))
+    Add (f . g $ a) (f . g $ b) = fmap f (Add (g a) (g b)) = fmap f .
+    fmap g $ Add a b
 
-so it's fulfilled as well.
+so it's fulfilled as well. Of course we can skip this bit in GHC thanks
+to `DeriveFunctor` extension that allows us to derive `fmap`
+autonomously.
 
+### Representing our type as a fixpoint
 
-## Representing our type as a fixpoint
-
-Let's play a bit and define the following data type
+We have a type `ExprF a`, which we know is a functor. We expect to
+insert a Fix Point as `a` to get some deeper insight into the nature of
+recursion, but what is that fix point?
 
     data Fix f = Fix (f (Fix f))  --or
     data Fix f = Fix {outF :: f (Fix f)}
 
+In mathematics a fix point is an element of a function that is mapped
+to itself by that function. If we expand one layer from `Fix f`, the
+inner application, we get
 
-So what does it mean that this element is a fixed point? In mathematics
-a fixed point is an element of a function that is mapped to itself by
-that function. To test it for our `Fix f`, we have to apply `Fix f` to
+    Fix (f (Fix f)) = Fix (f (Fix (f (Fix f))))
 
-    Fix (f (Fix (f (Fix f)))) = Fix (f (Fix f))
+and we can do it forever. So `Fix f` is an infinite chain of `Fix`
+applications and infinite chains don't care about one more application.
+If we apply `Fix f` to `Fix f`, we get `Fix f` again and that's what is
+meant by a fixpoint in this context.
 
-which we achieve by f `(Fix (f (Fix f))) = f (Fix f)`, so this is truly
-a fixed point of functor `f`. Let's assume we have the following syntax
-tree
+Let's define a simple syntax tree in terms of the initial `Expr`
 
     Mul (Add ((Const 2) (Const 2))) (Const 2)
 
-How can we represent it using the fixed point? Let's start with the
-inner `Const`s
+We should be able to represent the same thing with our `ExprF a`. Let's
+start with the innermost `Const`
 
-    (Fix $ Const 2)
+    Fix $ Const 2
 
-That was easy. To get the whole thing we have to wrap inside `Fix` on
-each level
+Checking the types checks out
+
+    > :t Fix $ Const 2
+    Fix $ Const 2 :: Fix ExprF
+
+We don't have to write an infinite chain because `Const` doesn't have
+any `a`s in it's type definition. To get the whole thing we have to wrap
+inside `Fix` on each level
 
     let fixedExpr =
     Fix (Mul (Fix (Add (Fix $ Const 2) (Fix $ Const 2))) (Fix $ Const 2))
 
-Before we get to do something useful with that data structure, we need
-to define one more thing
+The types check out again. I bet this was easier than it looked like at
+the beginning of this story.
 
-## Algebra
+### Algebras
 
-In mathematics an algebra is an 'unwrapping' function.
+An algebra is an 'unwrapping' function.
 
     type Algebra f a = f a -> a
 
-    // Note to self: So how can we make a prettify function. Do we need
-    something else than cata? Ah, the carrier type is arbitrary!
-
 So for our `ExprF` type applying it to `String` will give us an algebra
-`ExprF String -> String` like
+`ExprF String -> String` 
 
     printAlg :: ExprF String -> String
     printAlg (Const i) = show i
@@ -117,23 +138,25 @@ So for our `ExprF` type applying it to `String` will give us an algebra
     printAlg (Mul a b) = a ++ " * " ++ b
 
 Wait, but it cannot be of any use, I can hear you say, we don't have any
-way of applying that functions unwrapping strings into strings to our
+way of applying that function unwrapping strings into strings to our
 `fixedExpr`. Fear not!
 
-## Catamorphisms
+### Catamorphisms
 
+    cata :: Functor f => (f b -> b) -> Fix f -> b
     cata f = f . fmap (cata f) . outF
 
 Calling `cata printAlg fixedExpr` gives `"(2 + 2) * 2"`. WOW! The first
 time I got this I got so excited, this is amazing. Awesome. How does it
 work? `outF` unwraps one level from `fixedExpr` then `fmap` which we
-wrote some time ago recurses inside. When it gets to the bottom, that is
-`Const i` it converts it to the string. Level up we have strings so our
-function for `Add` acts on two strings. We've elliminated recursion
-altogether!
+wrote some time ago recurses inside. When it gets to the leave which are
+`Const i`, it converts each to the string. Then `f`s level up are
+called, but they already have their arguments as strings. We've
+eliminated recursion from our functions altogether! The only thing we
+had to define was what happens to a single element of `ExprF String`.
 
 We've achieved so much so easily, can we get an integer value for the
-same tree? We just need a simple new algebra:
+operation defined by same tree? We just need a simple new algebra:
 
     getValue :: ExprF Int -> Int
     getValue (Const i) = i
@@ -142,10 +165,12 @@ same tree? We just need a simple new algebra:
 
     cata getValue fixedExpr => 8
 
-Which is true given the way we've bundled expressions together in the
-above tree.  
+Notice how again we just have to describe what happens to a single
+element and all the internal types are the same. This keeps our code
+concise and fast.
 
-## Anamorphism
+// TODO: Continue second pass here
+### Anamorphism
 
 We can abstract away folds, can we unfold from a single value using a
 similar scheme? Sure we can. For that we need an oposite of algebra, a
@@ -173,7 +198,7 @@ how to print it, just use our catamorphism:
 
 Nice
 
-## Paramorphisms
+### Paramorphisms
 
 Notice that neither of these functions has access to the original
 structure. Stages higher up in a catamorphism (fold) only see the
@@ -202,7 +227,7 @@ if it turns we want to shorten the output for some important reason
 
 concatSums :: RAlgebra ExprF String
 concatSums (Const i) = show i
-concatSums (Add (aExpr, _) (bExpr, _)) = show $ cata getVal aExpr + cata getValue bExpr
+concatSums (Add (aExpr, _) (bExpr, _)) = show $ cata getValue aExpr + cata getValue bExpr
 concatSums (Mul (_, a) (_, b)) = a ++ " * " ++ b
 
 Here we've used both catamorphism for wrapping up the sums and
@@ -211,15 +236,27 @@ paramorphism for neatly doing everything in one step.
 Notice how `Const i` behaves differently then `Add` and `Mul`. That is
 obvious from the definition of `fmap` above. `fmap something (Const i)`
 equals `Const i` from definition, so it allows us to populate leaves in
-the tree and have a neat starting point for providing two arugments to
+the tree and have a neat starting point for providing two arguments to
 `Add` and `Mul`
 
 Coolness.
 
 TODO: An example here. Reword the above with more context
 
-## Recursion schemes library
+### Summing up
 
+We've learnt how to abstract recursion away to transform recursive code
+into one that exploits recursion inherently present in the datatype
+itself. We now know what a fix point of a functor is and can write
+five different algebras before coffee. If you have a minute, please let
+me know how this tutorial worked for you at
+[michal@monad.cat](mailto:michal@monad.cat)
 
+### Next part
 
-- using recursion schemes in Haskell with the recursion-schemes library
+In part 2 we will explore the
+[recursion-schemes](https://hackage.haskell.org/package/recursion-schemes-5.0.1/docs/Data-Functor-Foldable.html)
+library to move our understanding into the real world Haskell. The ideas
+will be broadly the same, with some magic sauce to make these
+functions even more generic. You can still use what you've learned here
+in your code as is though, so feel free to play with it.
