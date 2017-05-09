@@ -228,10 +228,10 @@ enable `ScopedTypeVariables`
 A cool example of a paramorphism would be to sum the additions together,
 if it turns we want to shorten the output for some important reason
 
-concatSums :: RAlgebra ExprF String
-concatSums (Const i) = show i
-concatSums (Add (aExpr, _) (bExpr, _)) = show $ cata getValue aExpr + cata getValue bExpr
-concatSums (Mul (_, a) (_, b)) = a ++ " * " ++ b
+    concatSums :: RAlgebra ExprF String
+    concatSums (Const i) = show i
+    concatSums (Add (aExpr, _) (bExpr, _)) = show $ cata getValue aExpr + cata getValue bExpr
+    concatSums (Mul (_, a) (_, b)) = a ++ " * " ++ b
 
 Here we've used both catamorphism for wrapping up the sums and
 paramorphism for neatly doing everything in one step. 
