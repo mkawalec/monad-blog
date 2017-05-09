@@ -169,11 +169,10 @@ Notice how again we just have to describe what happens to a single
 element and all the internal types are the same. This keeps our code
 concise and fast.
 
-// TODO: Continue second pass here
 ### Anamorphism
 
 We can abstract away folds, can we unfold from a single value using a
-similar scheme? Sure we can. For that we need an oposite of algebra, a
+similar scheme? Sure we can. For that we need an opposite of algebra, a
 coalgebra
 
     type Coalgebra f a = a -> f a
@@ -191,12 +190,12 @@ remember to wrap where cata unwraps:
     
     ana unwrap 1 => No instance for (Show (Fix ExprF)) arising from a use of ‘print’
 
-Oh, there's no way of printing `Fix`, which may be infinite. But we know
-how to print it, just use our catamorphism:
+Oh, there's no automatic way of printing `Fix`, which may be infinite.
+But we know how to print it, just use our catamorphism:
 
     cata printAlg $ ana unwrap 1 => "(((4 + 5) + 4) + (4 + 5))"
 
-Nice
+Nice.
 
 ### Paramorphisms
 
@@ -206,21 +205,25 @@ pretty-printed versions of elements down the tree, if we're creating a
 string-based representation. In many real-world tasks this is not enough
 and we need access to the original values along with their output
 representations. It would be a bit silly to parse output strings when
-folding.
+folding and it would negate any possible advantages of recursion
+schemes.
 
 Algebras that carry that information are called R-Algebras
 
     type RAlgebra f a = f (Fix f, a) -> a
 
-A recursion scheme accepting this type is called a paramorphism
+So instead of just accepting an element inside a functor, we get a tuple
+with the original entry and the pretty-printed element. A recursion
+scheme accepting this type is called a paramorphism
 
-    para :: (Functor f) => RAlgebra f a -> Fix f -> a
+    para :: forall f, a . (Functor f) => RAlgebra f a -> Fix f -> a
     para rAlg = rAlg . fmap fanout . outF
       where fanout :: Fix f -> (Fix f, a)
             fanout t = (t, para rAlg a)
 
 Notice how types perfectly match up, so much so that we can almost write
-these schemes by intuition.
+these schemes by intuition. If you're typing this in in your ghci,
+enable `ScopedTypeVariables`
 
 A cool example of a paramorphism would be to sum the additions together,
 if it turns we want to shorten the output for some important reason
@@ -233,15 +236,13 @@ concatSums (Mul (_, a) (_, b)) = a ++ " * " ++ b
 Here we've used both catamorphism for wrapping up the sums and
 paramorphism for neatly doing everything in one step. 
 
-Notice how `Const i` behaves differently then `Add` and `Mul`. That is
-obvious from the definition of `fmap` above. `fmap something (Const i)`
-equals `Const i` from definition, so it allows us to populate leaves in
-the tree and have a neat starting point for providing two arguments to
-`Add` and `Mul`
+Notice how `Const i` behaves differently then `Add` and `Mul`. We can
+see why it is so from the definition of `fmap` above. `fmap something
+(Const i)` equals `Const i` from definition, so it allows us to populate
+leaves in the tree without calling `fanout` and have a neat starting
+point for providing two arguments to `Add` and `Mul`
 
 Coolness.
-
-TODO: An example here. Reword the above with more context
 
 ### Summing up
 
