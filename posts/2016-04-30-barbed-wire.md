@@ -47,7 +47,7 @@ we're using a type parameter for encoding recursion.
                  | Mul a a
                  deriving (Show, Eq)
 
-The idea here is that we will use something called a 'fix point' of a
+The idea here is that we will use something called a 'fixed point' of a
 functor to encode recursive behavior inside `a` somehow. Before we get
 to that, let's prove our type is indeed a functor. To do that we have to
 implement `fmap` that abides by the functor laws. I propose the
@@ -77,18 +77,18 @@ same structure.
 
 so it's fulfilled as well. Of course we can skip this bit in GHC thanks
 to `DeriveFunctor` extension that allows us to derive `fmap`
-autonomously.
+automatically.
 
-### Representing our type as a fixpoint
+### Representing our type as a fixed point
 
 We have a type `ExprF a`, which we know is a functor. We expect to
-insert a Fix Point as `a` to get some deeper insight into the nature of
-recursion, but what is that fix point?
+insert a Fixed Point as `a` to get some deeper insight into the nature of
+recursion, but what is that fixed point?
 
     data Fix f = Fix (f (Fix f))  --or
     data Fix f = Fix {outF :: f (Fix f)}
 
-In mathematics a fix point is an element of a function that is mapped
+In mathematics a fixed point is an argument of a function that is mapped
 to itself by that function. If we expand one layer from `Fix f`, the
 inner application, we get
 
@@ -97,7 +97,7 @@ inner application, we get
 and we can do it forever. So `Fix f` is an infinite chain of `Fix`
 applications and infinite chains don't care about one more application.
 If we apply `Fix f` to `Fix f`, we get `Fix f` again and that's what is
-meant by a fixpoint in this context.
+meant by a fixed point in this context.
 
 Let's define a simple syntax tree in terms of the initial `Expr`
 
@@ -248,7 +248,7 @@ Coolness.
 
 We've learnt how to abstract recursion away to transform recursive code
 into one that exploits recursion inherently present in the datatype
-itself. We now know what a fix point of a functor is and can write
+itself. We now know what a fixed point of a functor is and can write
 five different algebras before coffee. If you have a minute, please let
 me know how this tutorial worked for you at
 [michal@monad.cat](mailto:michal@monad.cat)
