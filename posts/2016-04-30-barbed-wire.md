@@ -261,3 +261,13 @@ library to move our understanding into the real world Haskell. The ideas
 will be broadly the same, with some magic sauce to make these
 functions even more generic. You can still use what you've learned here
 in your code as is though, so feel free to play with it.
+
+### Further reading
+
+In researching this post I've mainly used the following resources:
+
+- [Understanding F-Algebras by Bartosz Milewski](https://bartoszmilewski.com/2013/06/10/understanding-f-algebras/)
+- [Practical Recursion Schemes by Jared Tobin](https://jtobin.io/practical-recursion-schemes)
+- [recursion-schemes library](https://hackage.haskell.org/package/recursion-schemes)
+- [Functional Programming with Bananas, Lenses, Envelopes and Barbed Wire](https://pdfs.semanticscholar.org/fec6/b29569eac1a340990bb07e90355efd2434ec.pdf)
+
