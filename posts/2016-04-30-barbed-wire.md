@@ -217,9 +217,9 @@ with the original entry and the pretty-printed element. A recursion
 scheme accepting this type is called a paramorphism
 
     para :: forall f a . (Functor f) => RAlgebra f a -> Fix f -> a
-		para rAlg = rAlg . fmap fanout . outF
-			where fanout :: Fix f -> (Fix f, a)
-						fanout t = (t, para rAlg t)
+    para rAlg = rAlg . fmap fanout . outF
+      where fanout :: Fix f -> (Fix f, a)
+            fanout t = (t, para rAlg t)
 
 Notice how types perfectly match up, so much so that we can almost write
 these schemes by intuition. If you're typing this in in your ghci,
