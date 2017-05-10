@@ -274,7 +274,7 @@ into one that exploits recursion inherently present in the datatype
 itself. We now know what a fixed point of a functor is and can write
 five different algebras before morning coffee. If you have a minute,
 please let me know how this tutorial worked for you. I would love to use
-your feedback while writing part 2.
+your feedback when writing part 2.
 
 ### Next part
 
