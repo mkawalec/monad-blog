@@ -33,10 +33,13 @@ made from this datatype.
     print (Mul a b) = print a ++ " * " ++ print b
 
 This is the usual way of defining recursion we're used to everywhere, we
-define it explicitly. It may not be optimal from the perspective of code
-readability with more complex recursion. There is also a possible
-performance penalty as GHC is way better in optimizing non-recursive
-then recursive code.
+define it explicitly. What if instead of pretty printing the syntax tree
+we wanted to calculate a numeric value of an operation it describes? We
+would have to write a function just like `print`, manually recursing
+into individual elements. While there's a little chance of making an
+error in this simple example, mistakes while writing recursive functions
+aren't unheard of. There is also a possible performance penalty as GHC
+is way better in optimizing non-recursive then recursive code.
 
 
 Can we do better? Possibly. Consider the following data type where
@@ -51,7 +54,7 @@ The idea here is that we will use something called a 'fixed point' of a
 functor to encode recursive behavior inside `a` somehow. Before we get
 to that, let's prove our type is indeed a functor. To do that we have to
 implement `fmap` that abides by the functor laws. I propose the
-following fmap
+following `fmap`
 
     fmap f (Const i) = Const i
     fmap f (Add a a) = Add (f a) (f a)
@@ -69,21 +72,33 @@ Our good old functor laws are
 
 To check that the first law is fulfilled, insert `id` for the function
 `f` and the proof will flow from definition above. The second case for
-`Add` will look as follows. It's the same for `Mul` since they have the
-same structure.
+`Add` looks as follows. It's the same for `Mul` since they have the same
+structure.
 
     Add (f . g $ a) (f . g $ b) = fmap f (Add (g a) (g b)) = fmap f .
     fmap g $ Add a b
 
 so it's fulfilled as well. Of course we can skip this bit in GHC thanks
 to `DeriveFunctor` extension that allows us to derive `fmap`
-automatically.
+automatically. We will reference this implementation later though, so
+it's best if it's written down explicitly.
 
 ### Representing our type as a fixed point
 
-We have a type `ExprF a`, which we know is a functor. We expect to
-insert a Fixed Point as `a` to get some deeper insight into the nature of
-recursion, but what is that fixed point?
+We have a type `ExprF a`, which we know is a functor. This data type
+looks a bit useless, given that the type itself depends on the amount of
+levels of nesting
+
+    > :t Const 2
+    Const 2 :: ExprF a
+
+    > :t Add (Const 1) (Const 2)
+    Add (Const 1) (Const 2) :: ExprF (ExprF a)
+
+And so on. Even worse, the type demands that all branches have the same
+depth, so it looks effectively unusable. But I've mentioned fixed point
+as something that can help encoding arbitrary recursive behaviour in
+`a`, what is it?
 
     data Fix f = Fix (f (Fix f))  --or
     data Fix f = Fix {outF :: f (Fix f)}
@@ -149,11 +164,13 @@ way of applying that function unwrapping strings into strings to our
 Calling `cata printAlg fixedExpr` gives `"(2 + 2) * 2"`. WOW! The first
 time I got this I got so excited, this is amazing. Awesome. How does it
 work? `outF` unwraps one level from `fixedExpr` then `fmap` which we
-wrote some time ago recurses inside. When it gets to the leave which are
-`Const i`, it converts each to the string. Then `f`s level up are
+wrote some time ago recurses inside. When it gets to leafs which are
+`Const i`, it converts each to a string. Then `f`s level up are
 called, but they already have their arguments as strings. We've
 eliminated recursion from our functions altogether! The only thing we
 had to define was what happens to a single element of `ExprF String`.
+This is an essence of functional programming, to compose a program from
+multiple parts, each focused on doing it's own thing well.
 
 We've achieved so much so easily, can we get an integer value for the
 operation defined by same tree? We just need a simple new algebra:
@@ -166,8 +183,10 @@ operation defined by same tree? We just need a simple new algebra:
     cata getValue fixedExpr => 8
 
 Notice how again we just have to describe what happens to a single
-element and all the internal types are the same. This keeps our code
-concise and fast.
+element and all the internal types are `Int`s. This keeps our code
+concise and fast. There is only one place where recursion happens, in
+the definition of `cata`. Once we're sure it is without errors, the
+possibility of making a mistake writing recursion disappears.
 
 ### Anamorphism
 
@@ -249,9 +268,7 @@ Coolness.
 We've learnt how to abstract recursion away to transform recursive code
 into one that exploits recursion inherently present in the datatype
 itself. We now know what a fixed point of a functor is and can write
-five different algebras before coffee. If you have a minute, please let
-me know how this tutorial worked for you at
-[michal@monad.cat](mailto:michal@monad.cat)
+five different algebras before morning coffee.
 
 ### Next part
 
@@ -267,6 +284,7 @@ in your code as is though, so feel free to play with it.
 In researching this post I've mainly used the following resources:
 
 - [Understanding F-Algebras by Bartosz Milewski](https://bartoszmilewski.com/2013/06/10/understanding-f-algebras/)
+- [Introduction to Recursion Schemes by Patrick Thomson](http://blog.sumtypeofway.com/an-introduction-to-recursion-schemes/)
 - [Practical Recursion Schemes by Jared Tobin](https://jtobin.io/practical-recursion-schemes)
 - [recursion-schemes library](https://hackage.haskell.org/package/recursion-schemes)
 - [Functional Programming with Bananas, Lenses, Envelopes and Barbed Wire](https://pdfs.semanticscholar.org/fec6/b29569eac1a340990bb07e90355efd2434ec.pdf)
