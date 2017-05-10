@@ -20,18 +20,22 @@ examples themselves. Let us jump right in.
 
 We usually write recursive data types like 
   
-    data Expr = Const Int
-              | Add Expr Expr
-              | Mul Expr Expr
+```haskell
+data Expr = Const Int
+          | Add Expr Expr
+          | Mul Expr Expr
+```
 
 This is a common way of writing a syntax tree, but it is not without
 downsides. Consider the following function that pretty-prints a tree
 made from this datatype.
 
-    print :: Expr -> String
-    print (Const i) = show i
-    print (Add a b) = print a ++ " + " ++ print b
-    print (Mul a b) = print a ++ " * " ++ print b
+```haskell
+print :: Expr -> String
+print (Const i) = show i
+print (Add a b) = print a ++ " + " ++ print b
+print (Mul a b) = print a ++ " * " ++ print b
+```
 
 This is the usual way of defining recursion we are used to everywhere &mdash; we
 define it explicitly. What if instead of pretty printing the syntax tree
@@ -46,10 +50,12 @@ is way better in optimizing non-recursive then recursive code.
 Can we do better? Possibly. Consider the following data type, where
 we are using a type parameter for encoding recursion.
 
-    data ExprF a = Const Int
-                 | Add a a
-                 | Mul a a
-                 deriving (Show, Eq)
+```haskell
+data ExprF a = Const Int
+             | Add a a
+             | Mul a a
+             deriving (Show, Eq)
+```
 
 The idea here is that we will use something called a 'fixed point' of a
 functor to encode recursive behavior inside `a` somehow. Before we get
@@ -57,9 +63,11 @@ to that, let us prove our type is, indeed, a functor. To do that, we have to
 implement `fmap` that abides by the functor laws. I propose the
 following `fmap`
 
-    fmap f (Const i) = Const i
-    fmap f (Add a a) = Add (f a) (f a)
-    fmap f (Mul a a) = Mul (f a) (f a)
+```haskell
+fmap f (Const i) = Const i
+fmap f (Add a a) = Add (f a) (f a)
+fmap f (Mul a a) = Mul (f a) (f a)
+```
 
 So by applying `f` with `fmap` we unpack a level out of a functor, apart
 from the `Const` case, where we return the thing itself. The reason for
@@ -68,8 +76,10 @@ passing `i` through is that `fmap` has type `a -> b`, but the type of
 
 Our good old functor laws are
 
-    fmap id == id
-    fmap (f . g) == fmap f . fmap g
+```haskell
+fmap id == id
+fmap (f . g) == fmap f . fmap g
+```
 
 To check that the first law is fulfilled, insert `id` for the function
 `f` and the proof will flow from definition above. The second case for
@@ -77,9 +87,10 @@ To check that the first law is fulfilled, insert `id` for the function
 `Add` will look as follows. It is the same for `Mul`, since they have the
 same structure.
 
-
-    Add (f . g $ a) (f . g $ b) = fmap f (Add (g a) (g b)) = fmap f .
-    fmap g $ Add a b
+```haskell
+Add (f . g $ a) (f . g $ b) = fmap f (Add (g a) (g b)) = fmap f .
+fmap g $ Add a b
+```
 
 so it is fulfilled as well. Of course, we can skip this bit in GHC thanks
 to `DeriveFunctor` extension that allows us to derive `fmap`
@@ -104,14 +115,18 @@ depth, so it looks effectively unusable. But I've mentioned fixed point
 as something that can help encoding arbitrary recursive behaviour in
 `a`, what is it?
 
-    data Fix f = Fix (f (Fix f))  --or
-    data Fix f = Fix {outF :: f (Fix f)}
+```haskell
+data Fix f = Fix (f (Fix f))  --or
+data Fix f = Fix {outF :: f (Fix f)}
+```
 
 In mathematics, a fixed point is an argument of a function that is mapped
 to itself by that function. If we expand one layer from `Fix f`, the
 inner application, we get
 
-    Fix (f (Fix f)) = Fix (f (Fix (f (Fix f))))
+```haskell
+Fix (f (Fix f)) = Fix (f (Fix (f (Fix f))))
+```
 
 and we can do it forever. So `Fix f` is an infinite chain of `Fix`
 applications, and infinite chains do not care about one more application.
@@ -120,12 +135,16 @@ meant by a fixed point in this context.
 
 Let us define a simple syntax tree in terms of the initial `Expr`
 
-    Mul (Add ((Const 2) (Const 2))) (Const 2)
+```haskell
+Mul (Add ((Const 2) (Const 2))) (Const 2)
+```
 
 We should be able to represent the same thing with our `ExprF a`. Let us
 start with the innermost `Const`
 
-    Fix $ Const 2
+```haskell
+Fix $ Const 2
+```
 
 Checking the types checks out
 
@@ -136,8 +155,10 @@ We do not have to write an infinite chain because `Const` does not have
 any `a`s in its type definition. To get the whole thing, we have to wrap
 inside `Fix` on each level
 
-    let fixedExpr =
-    Fix (Mul (Fix (Add (Fix $ Const 2) (Fix $ Const 2))) (Fix $ Const 2))
+```haskell
+let fixedExpr =
+Fix (Mul (Fix (Add (Fix $ Const 2) (Fix $ Const 2))) (Fix $ Const 2))
+```
 
 The types check out again. I bet this was easier than it looked like at
 the beginning of this story.
@@ -146,15 +167,19 @@ the beginning of this story.
 
 An algebra is an 'unwrapping' function.
 
-    type Algebra f a = f a -> a
+```haskell
+type Algebra f a = f a -> a
+```
 
 So for our `ExprF` type, applying it to `String` will give us an algebra
 `ExprF String -> String` 
 
-    printAlg :: ExprF String -> String
-    printAlg (Const i) = show i
-    printAlg (Add a b) = "(" ++ a ++ " + " ++ b ++ ")"
-    printAlg (Mul a b) = a ++ " * " ++ b
+```haskell
+printAlg :: ExprF String -> String
+printAlg (Const i) = show i
+printAlg (Add a b) = "(" ++ a ++ " + " ++ b ++ ")"
+printAlg (Mul a b) = a ++ " * " ++ b
+```
 
 Wait, but it cannot be of any use, I can hear you say. We do not have any
 way of applying that function unwrapping strings into strings to our
@@ -162,8 +187,10 @@ way of applying that function unwrapping strings into strings to our
 
 ### Catamorphisms
 
-    cata :: Functor f => (f b -> b) -> Fix f -> b
-    cata f = f . fmap (cata f) . outF
+```haskell
+cata :: Functor f => (f b -> b) -> Fix f -> b
+cata f = f . fmap (cata f) . outF
+```
 
 Calling `cata printAlg fixedExpr` gives `"(2 + 2) * 2"`. WOW! The first
 time I got this I got so excited, this is amazing. Awesome. How does it
@@ -179,10 +206,12 @@ multiple parts, each focused on doing it's own thing well.
 We have achieved so much so easily, can we get an integer value for the
 operation defined by same tree? We just need a simple new algebra:
 
-    getValue :: ExprF Int -> Int
-    getValue (Const i) = i
-    getValue (Add a b) = a + b
-    getValue (Mul a b) = a * b
+```haskell
+getValue :: ExprF Int -> Int
+getValue (Const i) = i
+getValue (Add a b) = a + b
+getValue (Mul a b) = a * b
+```
 
     cata getValue fixedExpr => 8
 
@@ -199,18 +228,22 @@ We can abstract away folds, but can we unfold from a single value using a
 similar scheme? Sure we can. For that we need an opposite of algebra, a
 coalgebra
 
-    type Coalgebra f a = a -> f a
+```haskell
+type Coalgebra f a = a -> f a
 
-    unwrap :: Coalgebra ExprF Int
-    unwrap i
-      | i < 4     = Add (i + 1) (i + 2)
-      | otherwise = Const i
+unwrap :: Coalgebra ExprF Int
+unwrap i
+  | i < 4     = Add (i + 1) (i + 2)
+  | otherwise = Const i
+```
 
 Anamorphism is a kind of opposite of a catamorphism, so let us see what
 we get if we just flip functions around in the catamorphism. We have to
 remember to wrap where cata unwraps:
 
-    ana f = Fix . fmap (ana f) . f
+```haskell
+ana f = Fix . fmap (ana f) . f
+```
     
     ana unwrap 1 => No instance for (Show (Fix ExprF)) arising from a use of ‘print’
 
@@ -234,16 +267,20 @@ schemes.
 
 Algebras that carry that information are called R-Algebras
 
+```haskell
     type RAlgebra f a = f (Fix f, a) -> a
+```
 
 So instead of just accepting an element inside a functor, we get a tuple
 with the original entry and the pretty-printed element. A recursion
 scheme accepting this type is called a paramorphism
 
-    para :: forall f a . (Functor f) => RAlgebra f a -> Fix f -> a
-    para rAlg = rAlg . fmap fanout . outF
-      where fanout :: Fix f -> (Fix f, a)
-            fanout t = (t, para rAlg t)
+```haskell
+para :: forall f a . (Functor f) => RAlgebra f a -> Fix f -> a
+para rAlg = rAlg . fmap fanout . outF
+  where fanout :: Fix f -> (Fix f, a)
+        fanout t = (t, para rAlg t)
+```
 
 Notice how types perfectly match up &mdash; so much so that we can almost write
 these schemes by intuition. If you are typing this in in your ghci,
@@ -252,10 +289,12 @@ enable `ScopedTypeVariables`
 A cool example of a paramorphism would be to sum the additions together,
 if it turns we want to shorten the output for some important reason
 
-    concatSums :: RAlgebra ExprF String
-    concatSums (Const i) = show i
-    concatSums (Add (aExpr, _) (bExpr, _)) = show $ cata getValue aExpr + cata getValue bExpr
-    concatSums (Mul (_, a) (_, b)) = a ++ " * " ++ b
+```haskell
+concatSums :: RAlgebra ExprF String
+concatSums (Const i) = show i
+concatSums (Add (aExpr, _) (bExpr, _)) = show $ cata getValue aExpr + cata getValue bExpr
+concatSums (Mul (_, a) (_, b)) = a ++ " * " ++ b
+```
 
 Here, we have used both &mdash; catamorphism for wrapping up the sums and
 paramorphism for neatly doing everything in one step. 
