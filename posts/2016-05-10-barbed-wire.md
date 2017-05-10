@@ -295,7 +295,8 @@ if it turns we want to shorten the output for some important reason
 ```haskell
 concatSums :: RAlgebra ExprF String
 concatSums (Const i) = show i
-concatSums (Add (aExpr, _) (bExpr, _)) = show $ cata getValue aExpr + cata getValue bExpr
+concatSums (Add (aExpr, _) (bExpr, _)) = 
+  show $ cata getValue aExpr + cata getValue bExpr
 concatSums (Mul (_, a) (_, b)) = a ++ " * " ++ b
 ```
 
