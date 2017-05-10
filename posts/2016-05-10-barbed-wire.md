@@ -1,6 +1,7 @@
 ---
 title: Programming with bananas and barbed wire. Part 1
 author: Michał Kawalec
+uuid: barbedPart1
 ---
 
 
