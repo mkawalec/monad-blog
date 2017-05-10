@@ -282,9 +282,12 @@ para rAlg = rAlg . fmap fanout . outF
         fanout t = (t, para rAlg t)
 ```
 
-Notice how types perfectly match up &mdash; so much so that we can almost write
-these schemes by intuition. If you are typing this in in your ghci,
-enable `ScopedTypeVariables`
+Notice how types perfectly match up &mdash; so much so that we can
+almost write these schemes by intuition. If you're typing this in ghci,
+enable `ScopedTypeVariables`. It is needed for types `f` and `a` in
+`fanout` to be interpreted by ghc as the same as `f` and `a` as in the
+definition of `para`. Explicit `forall` just signals that both `f` and
+`a` should be available as the same types in `fanout`.
 
 A cool example of a paramorphism would be to sum the additions together,
 if it turns we want to shorten the output for some important reason
