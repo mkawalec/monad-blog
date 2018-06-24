@@ -1,4 +1,8 @@
-# Świeradów Zdrój / Singletrek pod Smrkiem
+---
+title: Trail review, Świeradów Zdrój / Singletrek pod Smrkiem
+author: Michał Kawalec
+uuid: smrkreview
+---
 
 This was my first bikepark visit and I must say it was pretty amazing. Flowy trails, very well structured and good selection of difficulties for an intermediate-beginner I am.
 
