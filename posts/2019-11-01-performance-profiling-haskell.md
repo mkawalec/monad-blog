@@ -13,12 +13,26 @@ Tools:
   - ghc-gc-tune
   - profiteur
 
-hs2ps is a bit meh, didn't really show anything of use
+hs2ps is a bit meh, didn't really show anything of use unless for memory usage
 
 Why random is slow and why I've used a different version of the library?
 
 https://blog.jez.io/profiling-in-haskell/
 
 Talk about the memory layout
+  - how we have pointers to constructors
+  - how UNPACK solves that issue of nonlocality
+  - you can now unpack sum types!
+
+Practical guide on reading Core, you can see these other places for a better reference of Core features
 
 Reading the core to check optimization status
+  - dump it with -ddump-simpl
+  - evaluates at case expressions
+  - explain strictness annotations
+  - usage analysis and unpacking
+  - worker/wrapper transformation (generates a version of a function that accepts unpacked parameters)
+    - a maximum of ten parameters for a function when it is unpacked
+  - inlining functions is useful, but not always
+
+Try using LLVM
